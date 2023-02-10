@@ -1,5 +1,5 @@
 # Spectral toolbox
-Set of simple tools to manipulate/fix/edit spectral data
+Set of simple tools to manipulate/fix/edit spectral data. At least python 3.8 required!
 
 ## Installing required packages
 ```bash
@@ -18,7 +18,6 @@ python3 automatic_data_rotator.py directory_with_fits_files
 Requirements:
 - numpy
 - astropy
-- math
 
 Methodology: it reads the V_lsr of the oldest observation made in the direcrtory and then shifts all of the .fits files so all have same velocities in same channels.
 ### Important
