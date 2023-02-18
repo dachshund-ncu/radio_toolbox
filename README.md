@@ -32,7 +32,7 @@ python3 header_viewer.py spectral_file.fits
 ```
 
 ## Wise photometry reader
-Simple set of classes for easy crucial parts of the WISE satellite photometry tables, that are normally accesed from the [WISE catalog page](https://irsa.ipac.caltech.edu/cgi-bin/Gator/nph-scan?submit=Select&projshort=WISE).
+Simple set of classes for easy reading of the crucial parts of the WISE satellite photometry tables, that are normally accesed from the [WISE catalog page](https://irsa.ipac.caltech.edu/cgi-bin/Gator/nph-scan?submit=Select&projshort=WISE).
 
 Usage:
 ```python
