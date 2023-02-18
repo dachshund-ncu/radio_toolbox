@@ -30,3 +30,17 @@ Usage:
 ```bash
 python3 header_viewer.py spectral_file.fits
 ```
+
+## Wise photometry reader
+Simple set of classes for easy crucial parts of the WISE satellite photometry tables, that are normally accesed from the [WISE catalog page](https://irsa.ipac.caltech.edu/cgi-bin/Gator/nph-scan?submit=Select&projshort=WISE).
+
+Usage:
+```python
+# neowise
+wise_data = neowise_reader()
+wise_data.read("neowise_data.tbl")
+
+# allwise
+wise_data = allwise_reader()
+wise_data.read("allwise_data.tbl")
+```
