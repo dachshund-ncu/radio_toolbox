@@ -3,6 +3,8 @@ Set of simple tools to manipulate/fix/edit spectral data. At least python 3.8 re
 
 ## Installing required packages
 ```bash
+sudo apt install libbz2-dev
+sudo apt install gfortran
 python3 -m pip install --upgrade pip
 python3 -m pip install -r requirements.txt
 ```
@@ -43,4 +45,33 @@ wise_data.read("neowise_data.tbl")
 # allwise
 wise_data = allwise_reader()
 wise_data.read("allwise_data.tbl")
+```
+
+## Fits reader
+Two classes that are designed for reading .fits files. Sample fits files are provided in ```sample_data``` directory.
+
+- ```Spectrum```: allows for reading single .fits file
+
+- ```setOfSpec```: allows for reading all of the .fits files within a given directory
+
+### Requirements
+Before installing python packages please install these two packages:
+```bash
+sudo apt install libbz2-dev
+sudo apt install gfortran
+```
+
+Python packages:
+- fitsio
+- astropy
+
+
+### Usage
+Simple code snippet that displays dynamic spectrum from the data in ```sample_data``` directory
+```python
+import matplotlib.pyplot as plt
+cat = os.path.dirname(__file__)
+data = setOfSpec(os.path.join(cat, 'sample_data'))
+plt.pcolormesh(data.getMjdArray(), data.getVelArray(), data.get2DdataArray(pol='I'), cmap='jet')
+plt.show()
 ```
