@@ -130,7 +130,9 @@ class setOfSpec:
         initializes the class
         '''
         self.dataCatalog = catWithSource
+        self.flagged_obs = self.__read_flagged_obs(self.dataCatalog)
         self.spectra = self.__loadSpectraFromCat(self.dataCatalog)
+        
         self.__bubblesort()
 
     def __loadSpectraFromCat(self, catWithSource):
@@ -144,7 +146,7 @@ class setOfSpec:
                 if filename.endswith('.fits') or filename.endswith('.FITS'):
                     fitsFiles.append(os.path.join(catWithSource, filename))
         
-        return [Spectrum(fitsFileName) for fitsFileName in fitsFiles]
+        return [Spectrum(fitsFileName) for fitsFileName in fitsFiles if os.path.basename(fitsFileName) not in self.flagged_obs]
 
     def __bubblesort(self):
         '''
@@ -156,6 +158,15 @@ class setOfSpec:
                 if self.spectra[j].mjd > self.spectra[j+1].mjd:
                     self.spectra[j], self.spectra[j+1] = self.spectra[j+1], self.spectra[j]
 
+    def __read_flagged_obs(self, directory: str) -> np.ndarray:
+        '''
+        Reads the flagged filenames
+        '''
+        try:
+            return np.loadtxt(os.path.join(directory, 'flagged_obs.dat'), dtype=str)
+        except FileNotFoundError:
+            return []
+        
     def __str__(self):
         if len(self.spectra) > 0:
             return f"{len(self.spectra) }"
