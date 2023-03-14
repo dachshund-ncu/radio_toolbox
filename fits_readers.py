@@ -7,6 +7,7 @@ import fitsio as fits
 import numpy as np
 from astropy.time import Time
 import os
+import pandas as pd
 
 class Spectrum:
     def __init__(self, filename):
@@ -120,6 +121,26 @@ class Spectrum:
         V = (rhcTab - lhcTab) / 2.0
         return I,V
 
+    def get_dataframe(self) -> pd.DataFrame:
+        '''
+        returns a pandas dataframe with this spectrum
+        '''
+        return pd.DataFrame(np.column_stack((self.velocityTable, self.iTab, self.lhcTab, self.rhcTab, self.vTab)), columns=["Velocity", "I", "LHC", "RHC", "V"])
+
+    def get_integrated_flux_density(self, min_chan: int, max_chan: int) -> np.ndarray:
+        '''
+        Returns the integrated flux density of the obs, based on min and max channels
+        '''
+        channels = np.asarray(range(1,len(self.iTab)+1))
+        indices = np.logical_and(channels > min_chan, channels < max_chan)
+        Velocity = self.velocityTable[indices]
+
+        I = np.trapz(self.iTab[indices], Velocity)
+        V = np.trapz(self.vTab[indices], Velocity)
+        LHC = np.trapz(self.lhcTab[indices], Velocity)
+        RHC = np.trapz(self.rhcTab[indices], Velocity)
+        return np.asarray([self.mjd, I,V,LHC,RHC])
+
     def __str__(self):
         return repr(self.mjd)
 
@@ -213,7 +234,29 @@ class setOfSpec:
             raise BufferError("No data loaded!")
         else:
             return np.asarray([s.mjd for s in self.spectra])
-        
+    
+    def get_mean_spectrum(self):
+        '''
+        Returns the mean spectrum as a data frame
+        '''
+        velocity = self.getVelArray()
+        I = np.mean(np.asarray([sp.iTab for sp in self.spectra]), axis=0)
+        V = np.mean(np.asarray([sp.vTab for sp in self.spectra]), axis=0)
+        LHC = np.mean(np.asarray([sp.lhcTab for sp in self.spectra]), axis=0)
+        RHC = np.mean(np.asarray([sp.rhcTab for sp in self.spectra]), axis=0)
+        return pd.DataFrame(np.column_stack( (velocity, I, V, LHC, RHC)), columns=["Velocity", "I", "V", "LHC", "RHC"] )
+    
+    def get_integrated_flux_density(self, min_chan: int, max_chan:int, df=False) -> np.ndarray:
+        '''
+        Returns the integrated flux density for whole time series
+        '''
+        array = np.asarray([sp.get_integrated_flux_density(min_chan, max_chan) for sp in self.spectra])
+        print(array)
+        if df:
+            return pd.DataFrame(array, columns=["MJD", "I", "V", "LHC", "RHC"])
+        else:
+            return array
+
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
     cat = os.path.dirname(__file__)
