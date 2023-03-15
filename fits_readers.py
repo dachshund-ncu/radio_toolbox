@@ -8,14 +8,15 @@ import numpy as np
 from astropy.time import Time
 import os
 import pandas as pd
+from glob import glob
 
 class Spectrum:
-    def __init__(self, filename):
+    def __init__(self, filename, number = 0):
         '''
         initializes the class instance
         '''
-        self.dataSectionOfFitsFile = self.__readDataHeader(filename)
-        self.readDataFromHeader(self.dataSectionOfFitsFile)
+        self.filename = filename
+        self.readDataFromHeader(self.__readDataHeader(filename))
         
     def __readDataHeader(self, filename):
         '''
@@ -165,9 +166,9 @@ class setOfSpec:
         for root, dir, file in e:
             for filename in file:
                 if filename.endswith('.fits') or filename.endswith('.FITS'):
-                    fitsFiles.append(os.path.join(catWithSource, filename))
-        
-        return [Spectrum(fitsFileName) for fitsFileName in fitsFiles if os.path.basename(fitsFileName) not in self.flagged_obs]
+                    if os.path.basename(filename) not in self.flagged_obs:
+                        fitsFiles.append(os.path.join(catWithSource, filename))
+        return [Spectrum(fitsFileName, no) for no, fitsFileName in enumerate(fitsFiles)]
 
     def __bubblesort(self):
         '''
@@ -251,7 +252,6 @@ class setOfSpec:
         Returns the integrated flux density for whole time series
         '''
         array = np.asarray([sp.get_integrated_flux_density(min_chan, max_chan) for sp in self.spectra])
-        print(array)
         if df:
             return pd.DataFrame(array, columns=["MJD", "I", "V", "LHC", "RHC"])
         else:
