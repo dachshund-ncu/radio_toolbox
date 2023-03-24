@@ -8,7 +8,7 @@ import numpy as np
 from astropy.time import Time
 import os
 import pandas as pd
-from glob import glob
+import copy
 
 class Spectrum:
     def __init__(self, filename, number = 0):
@@ -66,7 +66,6 @@ class Spectrum:
         # -- doppler tracking --
         self.velocityTable = self.__generateVeltab(self.Vlsr, self.__dopp_vto, self.__restFreq, self.__freqRang)
         
-
     def __generateVeltab(self, Vlsr, dopp_vto, restFreq, freqRang):
         '''
         generates doppler-tracked velocity table
@@ -142,20 +141,33 @@ class Spectrum:
         RHC = np.trapz(self.rhcTab[indices], Velocity)
         return np.asarray([self.mjd, I,V,LHC,RHC])
 
+    def make_slice(self, indices: np.ndarray):
+        '''
+        Returns the slice of a spectrum
+        '''
+        new_slice = copy.deepcopy(self)
+        # slice the arrays
+        new_slice.iTab = new_slice.iTab[indices]
+        new_slice.vTab = new_slice.vTab[indices]
+        new_slice.lhcTab = new_slice.lhcTab[indices]
+        new_slice.rhcTab = new_slice.rhcTab[indices]
+        new_slice.velocityTable = new_slice.velocityTable[indices]
+        return new_slice
+    
     def __str__(self):
         return repr(self.mjd)
 
 
 class setOfSpec:
-    def __init__(self, catWithSource):
+    def __init__(self, catWithSource, load_on_creation = True):
         '''
         initializes the class
         '''
         self.dataCatalog = catWithSource
-        self.flagged_obs = self.__read_flagged_obs(self.dataCatalog)
-        self.spectra = self.__loadSpectraFromCat(self.dataCatalog)
-        
-        self.__bubblesort()
+        if load_on_creation:
+            self.flagged_obs = self.__read_flagged_obs(self.dataCatalog)
+            self.spectra = self.__loadSpectraFromCat(self.dataCatalog)
+            self.__bubblesort()
 
     def __loadSpectraFromCat(self, catWithSource):
         '''
@@ -256,6 +268,62 @@ class setOfSpec:
             return pd.DataFrame(array, columns=["MJD", "I", "V", "LHC", "RHC"])
         else:
             return array
+
+    def make_slice(self, velocities: tuple, epochs: tuple):
+        '''
+        Returns a slice of the current object, constrained by the values in the arguments
+        '''
+        # failsafes
+        if epochs[1] < epochs[0]:
+            epochs[0], epochs[1] = epochs[1], epochs[0]
+        if velocities[0] > velocities[1]:
+            velocities[0], velocities[1] = velocities[1], velocities[0]
+        
+        
+        # copy a current object
+        new_slice = setOfSpec(self.dataCatalog, load_on_creation=False)
+        new_slice.flagged_obs = self.flagged_obs
+        # get indices for velocity(channel) slices
+        vels = self.getVelArray()
+        velocity_indices = np.logical_and(vels >= velocities[0], vels <= velocities[1])
+        new_slice.spectra = [sp.make_slice(velocity_indices) for i,sp in enumerate(self.spectra) if sp.mjd >= epochs[0] and sp.mjd <= epochs[1]]
+        return new_slice
+    
+    def get_light_curve(self, velocity: float, df=True):
+        '''
+        Returns the light curve at a given velcoity
+        '''
+        veltab = self.getVelArray()
+        if velocity < veltab.min():
+            channel = 0
+        elif velocity > veltab.max():
+            channel = len(veltab)-1
+        else:
+            channel = self.__get_channel_for_velocity(veltab, velocity)
+        # extract the data
+        MJD = self.getMjdArray()
+        I = np.asarray([sp.iTab[channel] for sp in self.spectra])
+        V = np.asarray([sp.vTab[channel] for sp in self.spectra])
+        LHC = np.asarray([sp.lhcTab[channel] for sp in self.spectra])
+        RHC = np.asarray([sp.rhcTab[channel] for sp in self.spectra])
+        htop = np.column_stack((MJD, I, V, LHC, RHC))
+        if not df:
+            return htop, veltab[channel]
+        else:
+            return pd.DataFrame(htop, columns=["MJD", "I", "V", "LHC", "RHC"]), veltab[channel]
+    
+    def __get_channel_for_velocity(self, veltab: np.ndarray, velocity: float):
+        '''
+        Finds the best channel for the velocity
+        '''
+        for index, vel in enumerate(veltab):
+            if velocity <= vel:
+                break
+        dv = abs(veltab[1] - veltab[0])
+        if abs(vel - velocity) > 0.5 * dv and index > 0:
+            return index - 1
+        else: 
+            return index
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
